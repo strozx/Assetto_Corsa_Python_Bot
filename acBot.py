@@ -124,7 +124,7 @@ def process_img(image):
     processed_img = cv2.GaussianBlur(processed_img,(5,5),0)
 
     # vertices = np.array([[40,500],[10,300],[300,200],[500,200],[800,300],[800,500],], np.int32)
-    vertices = np.array([[0,400],[0,230],[800,230],[800,400],[600,300],[200,300],], np.int32)
+    vertices = np.array([[0,400],[150,260],[800,230],[800,400],[600,300],[200,300],], np.int32)
     # vertices2 = np.array([[10,550],[400,400],[800,400],[800,600],[10,600],], np.int32)
 
     processed_img = roi(processed_img, [vertices])
@@ -132,7 +132,7 @@ def process_img(image):
 
     # more info: http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html
     #                                     rho   theta   thresh  min length, max gap:
-    lines = cv2.HoughLinesP(processed_img, 1, np.pi/180, 180, np.array([]),     50,       5)
+    lines = cv2.HoughLinesP(processed_img, 1, np.pi/180, 180, np.array([]),     15,       3)
     m1 = 0
     m2 = 0
     try:
@@ -156,6 +156,10 @@ def process_img(image):
 
     return processed_img,original_image, m1,m2
 
+
+power = False
+start_time = time.time()
+
 def straight():
     PressKey(W)
     ReleaseKey(A)
@@ -163,36 +167,64 @@ def straight():
 
 def left():
     PressKey(A)
+    PressKey(S)
     ReleaseKey(W)
     ReleaseKey(D)
+    ReleaseKey(S)
+
 
 def right():
     PressKey(D)
+    PressKey(S)
     ReleaseKey(A)
     ReleaseKey(W)
+    ReleaseKey(S)
+
 
 def slow():
+    PressKey(S)
     ReleaseKey(W)
     ReleaseKey(A)
     ReleaseKey(D)
 
-for i in list(range(4)) [::-1]:
+
+for i in list(range(4))[::-1]:
     print(i+1)
     time.sleep(1)
 
+#
+# def acMain(ac_version):
+# 	appWindow = ac.newApp("appName")
+# 	ac.setSize(appWindow, 200, 200)
+#
+# 	ac.log("Hello, Assetto Corsa application world!")
+# 	ac.console("Hello, Assetto Corsa console!")
+# 	return "appName"
+
 while True:
+    if power is True:
+       start_time = time.time()
     screen =  np.array(ImageGrab.grab(bbox=(0,40,800,640)))
     last_time = time.time()
     new_screen,original_image, m1, m2 = process_img(screen)
     cv2.imshow('window', new_screen)
     cv2.imshow('window2',cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
-
     if m1 < 0 and m2 < 0:
         right()
+        print("Desno")
     elif m1 > 0 and m2 > 0:
         left()
+        print("Levos")
     else:
-        straight()
+        cur = time.time() - start_time
+        if cur > 300:
+            slow()
+            print("Bremza")
+
+        else:
+            straight()
+            print("Gas")
+            power = True
 
     #cv2.imshow('window',cv2.cvtColor(screen, cv2.COLOR_BGR2RGB))
     if cv2.waitKey(25) & 0xFF == ord('q'):
