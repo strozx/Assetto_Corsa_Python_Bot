@@ -1,14 +1,16 @@
 import numpy as np
 from PIL import ImageGrab
+import matplotlib.pylab as plt
 import cv2
 import time
 import pyautogui
 from numpy import ones,vstack
 from numpy.linalg import lstsq
-from directkeys import PressKey,ReleaseKey, W, A, S, D
+from directkeys import PressKey, ReleaseKey, W, A, S, D
 from statistics import mean
+from multiprocessing import shared_memory
 
-
+import mmap
 
 def roi(img, vertices):
 
@@ -123,16 +125,19 @@ def process_img(image):
 
     processed_img = cv2.GaussianBlur(processed_img,(5,5),0)
 
-    # vertices = np.array([[40,500],[10,300],[300,200],[500,200],[800,300],[800,500],], np.int32)
-    vertices = np.array([[0,400],[150,260],[800,230],[800,400],[600,300],[200,300],], np.int32)
-    # vertices2 = np.array([[10,550],[400,400],[800,400],[800,600],[10,600],], np.int32)
+    vertices = np.array([[0, 440],[150, 280],[800, 280],[800, 430],[490, 380],[320, 380],], np.int32)
 
     processed_img = roi(processed_img, [vertices])
     # processed_img = roi(processed_img,[vertices2])
 
     # more info: http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_houghlines/py_houghlines.html
     #                                     rho   theta   thresh  min length, max gap:
-    lines = cv2.HoughLinesP(processed_img, 1, np.pi/180, 180, np.array([]),     15,       3)
+    lines = cv2.HoughLinesP(processed_img,rho=2,
+                            theta=np.pi / 60,
+                            threshold=50,
+                            lines=np.array([]),
+                            minLineLength=40,
+                            maxLineGap=100)
     m1 = 0
     m2 = 0
     try:
@@ -188,43 +193,54 @@ def slow():
     ReleaseKey(D)
 
 
+def region_of_interest(img, vertices):
+    mask = np.zeros_like(img)
+    # channel_count = img.shape[2]
+    match_mask_color = 255
+    cv2.fillPoly(mask, vertices, match_mask_color)
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
+
+# # existing_shm = shared_memory.SharedMemory(name='Local\\acpmf_physics')
+# # c = np.ndarray((100,1), dtype=np.int64, buffer=existing_shm.buf)
+# # d = c.tolist()
+# shm = mmap.mmap(0, 4096, "Local\\acpmf_physics")
+# temp = shm.readline()
+# print(shm.size)
+
+# existing_shm.close()
 for i in list(range(4))[::-1]:
-    print(i+1)
+    print(i + 1)
     time.sleep(1)
 
-#
-# def acMain(ac_version):
-# 	appWindow = ac.newApp("appName")
-# 	ac.setSize(appWindow, 200, 200)
-#
-# 	ac.log("Hello, Assetto Corsa application world!")
-# 	ac.console("Hello, Assetto Corsa console!")
-# 	return "appName"
-
-while True:
+while 1:
     if power is True:
        start_time = time.time()
-    screen =  np.array(ImageGrab.grab(bbox=(0,40,800,640)))
+    screen = np.array(ImageGrab.grab(bbox=(0,40,800,640)))
     last_time = time.time()
     new_screen,original_image, m1, m2 = process_img(screen)
     cv2.imshow('window', new_screen)
     cv2.imshow('window2',cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
-    if m1 < 0 and m2 < 0:
-        right()
-        print("Desno")
-    elif m1 > 0 and m2 > 0:
-        left()
-        print("Levos")
-    else:
-        cur = time.time() - start_time
-        if cur > 300:
-            slow()
-            print("Bremza")
 
+    if 1:
+        if m1 < 0 and m2 < 0:
+            right()
+            print("Desno")
+        elif m1 > 0 and m2 > 0:
+            left()
+            print("Levo")
         else:
-            straight()
-            print("Gas")
-            power = True
+            cur = time.time() - start_time
+            print(cur)
+            if cur > 10:
+                slow()
+                print("Noter: " + str(cur))
+                print("Bremza")
+
+            else:
+                straight()
+                print("Gas")
+                power = True
 
     #cv2.imshow('window',cv2.cvtColor(screen, cv2.COLOR_BGR2RGB))
     if cv2.waitKey(25) & 0xFF == ord('q'):
