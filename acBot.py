@@ -175,7 +175,7 @@ def straight():
 
 def left():
     PressKey(A)
-    PressKey(S)
+    # PressKey(S)
     ReleaseKey(W)
     ReleaseKey(D)
     ReleaseKey(S)
@@ -183,7 +183,7 @@ def left():
 
 def right():
     PressKey(D)
-    PressKey(S)
+    # PressKey(S)
     ReleaseKey(A)
     ReleaseKey(W)
     ReleaseKey(S)
@@ -248,7 +248,8 @@ while 1:
             print("Levo")
         else:
             cur = time.time() - start_time
-            if car[7] > 50:
+            # speed control
+            if car[7] > 60:
                 slow()
                 print("Bremza")
 
