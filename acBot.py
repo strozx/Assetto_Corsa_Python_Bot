@@ -9,8 +9,11 @@ from numpy.linalg import lstsq
 from directkeys import PressKey, ReleaseKey, W, A, S, D
 from statistics import mean
 from multiprocessing import shared_memory
-
+import struct
 import mmap
+from collections import namedtuple
+from ctypes import *
+
 
 def roi(img, vertices):
 
@@ -201,26 +204,40 @@ def region_of_interest(img, vertices):
     masked_image = cv2.bitwise_and(img, mask)
     return masked_image
 
-# # existing_shm = shared_memory.SharedMemory(name='Local\\acpmf_physics')
-# # c = np.ndarray((100,1), dtype=np.int64, buffer=existing_shm.buf)
-# # d = c.tolist()
-# shm = mmap.mmap(0, 4096, "Local\\acpmf_physics")
-# temp = shm.readline()
-# print(shm.size)
 
-# existing_shm.close()
+class Car(Structure):
+    _fields_ = [('packetId', c_int),
+                ('gas', c_float),
+                ('brake', c_float),
+                ('fuel', c_float),
+                ('gear', c_int),
+                ('rpms', c_int),
+                ('steerAngle', c_float),
+                ('speedKmh', c_float)]
+
+
 for i in list(range(4))[::-1]:
     print(i + 1)
     time.sleep(1)
 
+car = Car()
+
 while 1:
     if power is True:
-       start_time = time.time()
+        start_time = time.time()
     screen = np.array(ImageGrab.grab(bbox=(0,40,800,640)))
     last_time = time.time()
     new_screen,original_image, m1, m2 = process_img(screen)
     cv2.imshow('window', new_screen)
     cv2.imshow('window2',cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+    shm = mmap.mmap(0, 4096, "Local\\acpmf_physics")
+    buff = create_string_buffer(32)
+    temp = shm.readline()
+    buff.raw = temp[:32]
+
+    car = struct.unpack_from('ifffiiff', buff.raw, 0)
+    print(car[7])
+    shm.close()
 
     if 1:
         if m1 < 0 and m2 < 0:
@@ -231,10 +248,8 @@ while 1:
             print("Levo")
         else:
             cur = time.time() - start_time
-            print(cur)
-            if cur > 10:
+            if car[7] > 50:
                 slow()
-                print("Noter: " + str(cur))
                 print("Bremza")
 
             else:
@@ -244,5 +259,6 @@ while 1:
 
     #cv2.imshow('window',cv2.cvtColor(screen, cv2.COLOR_BGR2RGB))
     if cv2.waitKey(25) & 0xFF == ord('q'):
+        shm.close()
         cv2.destroyAllWindows()
         break
